@@ -1,0 +1,4 @@
+parameters:
+    key: value
+    array_key:
+        arry_sub_key: v
