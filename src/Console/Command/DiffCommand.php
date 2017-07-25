@@ -21,16 +21,24 @@ final class DiffCommand extends Command
             ->setName('diff')
             ->addArgument('source-file', InputArgument::REQUIRED, 'The source file, which we can trust.')
             ->addArgument('tested-file', InputArgument::REQUIRED, 'The tested file, which we hope has the same keys as the source file.')
-            ->addOption('max-depth', null, InputOption::VALUE_REQUIRED, 'The maximum level depth to search for differences.');
+            ->addOption('max-depth', null, InputOption::VALUE_REQUIRED, 'The maximum level depth to search for differences.')
+            ->addOption('count', 'c', InputOption::VALUE_NONE, 'Display a message with the number of differences.')
+        ;
     }
 
     protected function execute(InputInterface $input, OutputInterface $output)
     {
         $runner = new DiffRunner($input->getArgument('source-file'), $input->getArgument('tested-file'), (int) $input->getOption('max-depth'));
         $result = $runner();
+        $result = $this->flattenDiffResult($result);
+        $io = new SymfonyStyle($input, $output);
+
+        if ($input->getOption('count')) {
+            $this->output($result, $io);
+        }
 
         if ($output->isVerbose()) {
-            $this->output($result, new SymfonyStyle($input, $output));
+            $this->outputMissingKeys($result, $io);
         }
 
         return empty($result) ? 0 : 1;
@@ -38,7 +46,6 @@ final class DiffCommand extends Command
 
     private function output(array $result, SymfonyStyle $output)
     {
-        $result = $this->transformResult($result);
         $nbDifference = count($result);
         if (0 === $nbDifference) {
             $output->success('There is no difference between source and tested files.');
@@ -51,9 +58,6 @@ final class DiffCommand extends Command
         } else {
             $output->error(sprintf('There are %d differences between source and tested files.', $nbDifference));
         }
-        if ($output->isVeryVerbose()) {
-            $this->outputMissingKeys($result, $output);
-        }
     }
 
     private function outputMissingKeys(array $result, SymfonyStyle $output)
@@ -63,7 +67,7 @@ final class DiffCommand extends Command
         }
     }
 
-    private function transformResult(array $result, $currentPath = '')
+    private function flattenDiffResult(array $result, $currentPath = '')
     {
         if ($currentPath) {
             $currentPath .= '.';
@@ -76,7 +80,7 @@ final class DiffCommand extends Command
                 continue;
             }
 
-            $keys = array_merge($keys, $this->transformResult($item, $currentPath.$key));
+            $keys = array_merge($keys, $this->flattenDiffResult($item, $currentPath.$key));
         }
 
         return $keys;

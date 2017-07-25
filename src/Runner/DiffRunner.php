@@ -50,7 +50,10 @@ final class DiffRunner
                 $diff[] = $itemKey;
                 continue;
             }
-            $diff[$itemKey] = $this->diff($itemValue, $testedContent[$itemKey], $itemKey, $currentDepth + 1);
+            $diffOnDeeperDepth = $this->diff($itemValue, $testedContent[$itemKey], $itemKey, $currentDepth + 1);
+            if (!empty($diffOnDeeperDepth)) {
+                $diff[$itemKey] = $diffOnDeeperDepth;
+            }
         }
 
         return $diff;
